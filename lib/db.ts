@@ -215,8 +215,8 @@ export async function createUser(
     deactivated_at: null,
     deactivated_by: null,
     created_at: new Date().toISOString(),
-  });
-  return Number(result.lastInsertRowid);
+  }).returning({ id: users.id });
+  return result[0]?.id ?? 0;
 }
 
 export async function createOffer(
@@ -254,9 +254,9 @@ export async function createOffer(
     status: offerStatus,
     created_by: createdBy,
     created_at: new Date().toISOString(),
-  });
-  
-  return Number(result.lastInsertRowid);
+  }).returning({ id: offers.id });
+
+  return result[0]?.id ?? 0;
 }
 
 export async function updateOffer(
@@ -280,8 +280,9 @@ export async function updateOffer(
   const db = await getDrizzleDb();
   const result = await db.update(offers)
     .set({ ...updates, updated_at: new Date().toISOString() })
-    .where(eq(offers.id, id));
-  return result.changes > 0;
+    .where(eq(offers.id, id))
+    .returning({ id: offers.id });
+  return result.length > 0;
 }
 
 export async function adjustLeaveBalance(
@@ -315,15 +316,16 @@ export async function adjustLeaveBalance(
   
   const result = await db.update(leaveBalances)
     .set(updateData)
-    .where(eq(leaveBalances.id, b.id));
-  
-  return result.changes > 0;
+    .where(eq(leaveBalances.id, b.id))
+    .returning({ id: leaveBalances.id });
+
+  return result.length > 0;
 }
 
 export async function deleteOffer(id: number): Promise<boolean> {
   const db = await getDrizzleDb();
-  const result = await db.delete(offers).where(eq(offers.id, id));
-  return result.changes > 0;
+  const result = await db.delete(offers).where(eq(offers.id, id)).returning({ id: offers.id });
+  return result.length > 0;
 }
 
 export async function createRequest(
@@ -354,8 +356,8 @@ export async function createRequest(
     approval_reason: null,
     auto_rejection_reason: autoRejectionReason || null,
     created_at: new Date().toISOString(),
-  });
-  return Number(result.lastInsertRowid);
+  }).returning({ id: requests.id });
+  return result[0]?.id ?? 0;
 }
 
 export async function approveRequest(requestId: number, approvedBy: number): Promise<boolean> {
@@ -367,8 +369,9 @@ export async function approveRequest(requestId: number, approvedBy: number): Pro
       approval_date: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
-    .where(eq(requests.id, requestId));
-  return result.changes > 0;
+    .where(eq(requests.id, requestId))
+    .returning({ id: requests.id });
+  return result.length > 0;
 }
 
 export async function rejectRequest(requestId: number, approvedBy: number): Promise<boolean> {
@@ -380,8 +383,9 @@ export async function rejectRequest(requestId: number, approvedBy: number): Prom
       approval_date: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
-    .where(eq(requests.id, requestId));
-  return result.changes > 0;
+    .where(eq(requests.id, requestId))
+    .returning({ id: requests.id });
+  return result.length > 0;
 }
 
 export async function updateLeaveBalance(userId: number, usedLeave: number): Promise<boolean> {
@@ -399,9 +403,10 @@ export async function updateLeaveBalance(userId: number, usedLeave: number): Pro
       remaining_leave: balance[0].annual_leave - usedLeave,
       updated_at: new Date().toISOString(),
     })
-    .where(eq(leaveBalances.id, balance[0].id));
-  
-  return result.changes > 0;
+    .where(eq(leaveBalances.id, balance[0].id))
+    .returning({ id: leaveBalances.id });
+
+  return result.length > 0;
 }
 
 export async function initializeLeaveBalance(userId: number, annualLeave: number = 30, daysWorked: number = 0): Promise<number> {
@@ -422,9 +427,9 @@ export async function initializeLeaveBalance(userId: number, annualLeave: number
     adjustment_reason: null,
     updated_at: new Date().toISOString(),
     created_at: new Date().toISOString(),
-  });
-  
-  return Number(result.lastInsertRowid);
+  }).returning({ id: leaveBalances.id });
+
+  return result[0]?.id ?? 0;
 }
 
 export async function logActivity(
@@ -472,8 +477,9 @@ export async function updateRequest(
   
   const result = await db.update(requests)
     .set(updateData)
-    .where(eq(requests.id, requestId));
-  return result.changes > 0;
+    .where(eq(requests.id, requestId))
+    .returning({ id: requests.id });
+  return result.length > 0;
 }
 
 export async function updateRequestDetails(
@@ -489,8 +495,9 @@ export async function updateRequestDetails(
   
   const result = await db.update(requests)
     .set(updateData)
-    .where(eq(requests.id, requestId));
-  return result.changes > 0;
+    .where(eq(requests.id, requestId))
+    .returning({ id: requests.id });
+  return result.length > 0;
 }
 
 export async function updateOfferParticipants(offerId: number): Promise<boolean> {
@@ -503,15 +510,16 @@ export async function updateOfferParticipants(offerId: number): Promise<boolean>
       current_participants: offer.current_participants + 1,
       updated_at: new Date().toISOString(),
     })
-    .where(eq(offers.id, offerId));
-  
-  return result.changes > 0;
+    .where(eq(offers.id, offerId))
+    .returning({ id: offers.id });
+
+  return result.length > 0;
 }
 
 export async function deleteRequest(requestId: number): Promise<boolean> {
   const db = await getDrizzleDb();
-  const result = await db.delete(requests).where(eq(requests.id, requestId));
-  return result.changes > 0;
+  const result = await db.delete(requests).where(eq(requests.id, requestId)).returning({ id: requests.id });
+  return result.length > 0;
 }
 
 export async function updateLeaveBalanceUsage(userId: number, days: number): Promise<boolean> {
@@ -529,9 +537,10 @@ export async function updateLeaveBalanceUsage(userId: number, days: number): Pro
       remaining_leave: balance[0].remaining_leave - days,
       updated_at: new Date().toISOString(),
     })
-    .where(eq(leaveBalances.id, balance[0].id));
-  
-  return result.changes > 0;
+    .where(eq(leaveBalances.id, balance[0].id))
+    .returning({ id: leaveBalances.id });
+
+  return result.length > 0;
 }
 
 export function calculateLeaveFromWorkDays(daysWorked: number): number {
@@ -667,15 +676,16 @@ export async function updateHrAdmin(id: number, updates: {
   
   const result = await db.update(users)
     .set(updateData)
-    .where(eq(users.id, id));
-  
-  return result.changes > 0;
+    .where(eq(users.id, id))
+    .returning({ id: users.id });
+
+  return result.length > 0;
 }
 
 export async function deleteHrAdmin(id: number): Promise<boolean> {
   const db = await getDrizzleDb();
-  const result = await db.delete(users).where(and(eq(users.id, id), eq(users.role, 'hr_admin')));
-  return result.changes > 0;
+  const result = await db.delete(users).where(and(eq(users.id, id), eq(users.role, 'hr_admin'))).returning({ id: users.id });
+  return result.length > 0;
 }
 
 export async function deactivateHrAdmin(id: number, deactivatedBy: number): Promise<boolean> {
@@ -686,8 +696,9 @@ export async function deactivateHrAdmin(id: number, deactivatedBy: number): Prom
       deactivated_at: new Date().toISOString(),
       deactivated_by: deactivatedBy,
     })
-    .where(and(eq(users.id, id), eq(users.role, 'hr_admin')));
-  return result.changes > 0;
+    .where(and(eq(users.id, id), eq(users.role, 'hr_admin')))
+    .returning({ id: users.id });
+  return result.length > 0;
 }
 
 export async function reactivateHrAdmin(id: number, reactivatedBy: number): Promise<boolean> {
@@ -698,13 +709,14 @@ export async function reactivateHrAdmin(id: number, reactivatedBy: number): Prom
       deactivated_at: null,
       deactivated_by: null,
     })
-    .where(and(eq(users.id, id), eq(users.role, 'hr_admin')));
-  
-  if (result.changes > 0) {
+    .where(and(eq(users.id, id), eq(users.role, 'hr_admin')))
+    .returning({ id: users.id });
+
+  if (result.length > 0) {
     await logActivity(reactivatedBy, 'reactivated_hr_admin', 'user', id);
   }
-  
-  return result.changes > 0;
+
+  return result.length > 0;
 }
 
 export async function getEmployees(): Promise<User[]> {
@@ -743,16 +755,17 @@ export async function updateEmployee(id: number, updates: {
   
   const result = await db.update(users)
     .set(updateData)
-    .where(eq(users.id, id));
-  
-  return result.changes > 0;
+    .where(eq(users.id, id))
+    .returning({ id: users.id });
+
+  return result.length > 0;
 }
 
 // Delete employee function
 export async function deleteEmployee(id: number): Promise<boolean> {
   const db = await getDrizzleDb();
-  const result = await db.delete(users).where(and(eq(users.id, id), eq(users.role, 'employee')));
-  return result.changes > 0;
+  const result = await db.delete(users).where(and(eq(users.id, id), eq(users.role, 'employee'))).returning({ id: users.id });
+  return result.length > 0;
 }
 
 export async function updateUserProfile(id: number, updates: {
@@ -786,9 +799,10 @@ export async function updateUserProfile(id: number, updates: {
   
   const result = await db.update(users)
     .set(updateData)
-    .where(eq(users.id, id));
-  
-  return result.changes > 0;
+    .where(eq(users.id, id))
+    .returning({ id: users.id });
+
+  return result.length > 0;
 }
 
 export async function setEmployeeStatus(id: number, status: UserStatus, changedBy?: number): Promise<boolean> {
@@ -814,9 +828,10 @@ export async function setEmployeeStatus(id: number, status: UserStatus, changedB
   
   const result = await db.update(users)
     .set(updateData)
-    .where(eq(users.id, id));
-  
-  return result.changes > 0;
+    .where(eq(users.id, id))
+    .returning({ id: users.id });
+
+  return result.length > 0;
 }
 
 // System Settings functions
@@ -833,8 +848,9 @@ export async function setSystemSetting(key: string, value: string, updatedBy: nu
   if (existing[0]) {
     const result = await db.update(systemSettings)
       .set({ value, updated_at: new Date().toISOString(), updated_by: updatedBy })
-      .where(eq(systemSettings.id, existing[0].id));
-    return result.changes > 0;
+      .where(eq(systemSettings.id, existing[0].id))
+      .returning({ id: systemSettings.id });
+    return result.length > 0;
   } else {
     await db.insert(systemSettings).values({
       key,
