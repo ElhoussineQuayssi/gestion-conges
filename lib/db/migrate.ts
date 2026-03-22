@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { getDbConnection } from './index';
+import { getDbConnection, saveDatabase } from './index';
 import { users, offers, requests, leaveBalances, activityLogs, systemSettings } from './schema';
 
 /**
@@ -20,16 +20,16 @@ interface JsonDatabase {
 /**
  * Create all database tables
  */
-export function createTables(): void {
-  const db = getDbConnection();
+export async function createTables(): Promise<void> {
+  const db = await getDbConnection();
   
   console.log('[Migration] Creating tables...');
   
   // Enable foreign keys
-  db.pragma('foreign_keys = ON');
+  db.run('PRAGMA foreign_keys = ON');
   
   // Create users table
-  db.exec(`
+  db.run(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       email TEXT NOT NULL UNIQUE,
@@ -46,7 +46,7 @@ export function createTables(): void {
   `);
   
   // Create offers table
-  db.exec(`
+  db.run(`
     CREATE TABLE IF NOT EXISTS offers (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
@@ -70,7 +70,7 @@ export function createTables(): void {
   `);
   
   // Create requests table
-  db.exec(`
+  db.run(`
     CREATE TABLE IF NOT EXISTS requests (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL REFERENCES users(id),
@@ -92,7 +92,7 @@ export function createTables(): void {
   `);
   
   // Create leave_balances table
-  db.exec(`
+  db.run(`
     CREATE TABLE IF NOT EXISTS leave_balances (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL REFERENCES users(id),
@@ -105,13 +105,12 @@ export function createTables(): void {
       manual_adjustment REAL NOT NULL DEFAULT 0,
       adjustment_reason TEXT,
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      UNIQUE(user_id, year)
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
   
   // Create activity_logs table
-  db.exec(`
+  db.run(`
     CREATE TABLE IF NOT EXISTS activity_logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL REFERENCES users(id),
@@ -126,7 +125,7 @@ export function createTables(): void {
   `);
   
   // Create system_settings table
-  db.exec(`
+  db.run(`
     CREATE TABLE IF NOT EXISTS system_settings (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       key TEXT NOT NULL UNIQUE,
@@ -138,49 +137,51 @@ export function createTables(): void {
     )
   `);
   
+  await saveDatabase();
   console.log('[Migration] Tables created successfully');
 }
 
 /**
  * Create indexes for frequently queried fields
  */
-export function createIndexes(): void {
-  const db = getDbConnection();
+export async function createIndexes(): Promise<void> {
+  const db = await getDbConnection();
   
   console.log('[Migration] Creating indexes...');
   
   // Users indexes
-  db.exec('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)');
-  db.exec('CREATE INDEX IF NOT EXISTS idx_users_role ON users(role)');
-  db.exec('CREATE INDEX IF NOT EXISTS idx_users_status ON users(status)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_users_role ON users(role)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_users_status ON users(status)');
   
   // Offers indexes
-  db.exec('CREATE INDEX IF NOT EXISTS idx_offers_status ON offers(status)');
-  db.exec('CREATE INDEX IF NOT EXISTS idx_offers_start_date ON offers(start_date)');
-  db.exec('CREATE INDEX IF NOT EXISTS idx_offers_created_by ON offers(created_by)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_offers_status ON offers(status)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_offers_start_date ON offers(start_date)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_offers_created_by ON offers(created_by)');
   
   // Requests indexes
-  db.exec('CREATE INDEX IF NOT EXISTS idx_requests_user_id ON requests(user_id)');
-  db.exec('CREATE INDEX IF NOT EXISTS idx_requests_status ON requests(status)');
-  db.exec('CREATE INDEX IF NOT EXISTS idx_requests_type ON requests(type)');
-  db.exec('CREATE INDEX IF NOT EXISTS idx_requests_created_at ON requests(created_at)');
-  db.exec('CREATE INDEX IF NOT EXISTS idx_requests_offer_id ON requests(offer_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_requests_user_id ON requests(user_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_requests_status ON requests(status)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_requests_type ON requests(type)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_requests_created_at ON requests(created_at)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_requests_offer_id ON requests(offer_id)');
   
   // Leave balances indexes
-  db.exec('CREATE INDEX IF NOT EXISTS idx_leave_balances_user_id ON leave_balances(user_id)');
-  db.exec('CREATE INDEX IF NOT EXISTS idx_leave_balances_year ON leave_balances(year)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_leave_balances_user_id ON leave_balances(user_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_leave_balances_year ON leave_balances(year)');
   
   // Activity logs indexes
-  db.exec('CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON activity_logs(user_id)');
-  db.exec('CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON activity_logs(created_at)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON activity_logs(user_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON activity_logs(created_at)');
   
+  await saveDatabase();
   console.log('[Migration] Indexes created successfully');
 }
 
 /**
  * Seed the database with data from db.json
  */
-export function seedFromJson(): void {
+export async function seedFromJson(): Promise<void> {
   const dbPath = path.join(process.cwd(), 'data', 'db.json');
   
   if (!fs.existsSync(dbPath)) {
@@ -190,159 +191,156 @@ export function seedFromJson(): void {
   
   console.log('[Migration] Seeding database from db.json...');
   
-  const db = getDbConnection();
+  const db = await getDbConnection();
   const content = fs.readFileSync(dbPath, 'utf-8');
   const data: JsonDatabase = JSON.parse(content);
   
   // Check if data already exists
-  const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number };
-  if (userCount.count > 0) {
+  const userCountResult = db.exec('SELECT COUNT(*) as count FROM users');
+  const userCount = userCountResult[0]?.values[0]?.[0] as number || 0;
+  
+  if (userCount > 0) {
     console.log('[Migration] Database already has data, skipping seed');
     return;
   }
   
-  // Seed users
-  const insertUser = db.prepare(`
-    INSERT INTO users (id, email, password_hash, full_name, role, department, status, deactivated_at, deactivated_by, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-  `);
-  
+  // Seed users using run() method
   for (const user of data.users) {
-    insertUser.run(
-      user.id,
-      user.email,
-      user.password_hash,
-      user.full_name,
-      user.role,
-      user.department || null,
-      user.status,
-      user.deactivated_at || null,
-      user.deactivated_by || null
+    db.run(
+      `INSERT INTO users (id, email, password_hash, full_name, role, department, status, deactivated_at, deactivated_by, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+      [
+        user.id,
+        user.email,
+        user.password_hash,
+        user.full_name,
+        user.role,
+        user.department || null,
+        user.status,
+        user.deactivated_at || null,
+        user.deactivated_by || null
+      ]
     );
   }
   console.log(`[Migration] Seeded ${data.users.length} users`);
   
   // Seed offers
-  const insertOffer = db.prepare(`
-    INSERT INTO offers (id, title, description, destination, start_date, end_date, duration, price, max_participants, current_participants, application_deadline, hotel_name, conditions, images, status, created_by, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-  `);
-  
   for (const offer of data.offers || []) {
-    insertOffer.run(
-      offer.id,
-      offer.title,
-      offer.description || null,
-      offer.destination,
-      offer.start_date,
-      offer.end_date,
-      offer.duration || null,
-      offer.price,
-      offer.max_participants,
-      offer.current_participants,
-      offer.application_deadline || null,
-      offer.hotel_name || null,
-      offer.conditions || null,
-      JSON.stringify(offer.images || []),
-      offer.status,
-      offer.created_by
+    db.run(
+      `INSERT INTO offers (id, title, description, destination, start_date, end_date, duration, price, max_participants, current_participants, application_deadline, hotel_name, conditions, images, status, created_by, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+      [
+        offer.id,
+        offer.title,
+        offer.description || null,
+        offer.destination,
+        offer.start_date,
+        offer.end_date,
+        offer.duration || null,
+        offer.price,
+        offer.max_participants,
+        offer.current_participants,
+        offer.application_deadline || null,
+        offer.hotel_name || null,
+        offer.conditions || null,
+        JSON.stringify(offer.images || []),
+        offer.status,
+        offer.created_by
+      ]
     );
   }
   console.log(`[Migration] Seeded ${data.offers?.length || 0} offers`);
   
   // Seed requests
-  const insertRequest = db.prepare(`
-    INSERT INTO requests (id, user_id, offer_id, type, start_date, end_date, selected_start_date, selected_end_date, reason, status, approved_by, approval_date, approval_reason, auto_rejection_reason, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-  `);
-  
   for (const request of data.requests || []) {
-    insertRequest.run(
-      request.id,
-      request.user_id,
-      request.offer_id || null,
-      request.type,
-      request.start_date || null,
-      request.end_date || null,
-      request.selected_start_date || null,
-      request.selected_end_date || null,
-      request.reason || null,
-      request.status,
-      request.approved_by || null,
-      request.approval_date || null,
-      request.approval_reason || null,
-      request.auto_rejection_reason || null
+    db.run(
+      `INSERT INTO requests (id, user_id, offer_id, type, start_date, end_date, selected_start_date, selected_end_date, reason, status, approved_by, approval_date, approval_reason, auto_rejection_reason, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+      [
+        request.id,
+        request.user_id,
+        request.offer_id || null,
+        request.type,
+        request.start_date || null,
+        request.end_date || null,
+        request.selected_start_date || null,
+        request.selected_end_date || null,
+        request.reason || null,
+        request.status,
+        request.approved_by || null,
+        request.approval_date || null,
+        request.approval_reason || null,
+        request.auto_rejection_reason || null
+      ]
     );
   }
   console.log(`[Migration] Seeded ${data.requests?.length || 0} requests`);
   
   // Seed leave balances
-  const insertBalance = db.prepare(`
-    INSERT INTO leave_balances (id, user_id, annual_leave, used_leave, remaining_leave, year, days_worked, calculated_leave, manual_adjustment, adjustment_reason, updated_at, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-  `);
-  
   for (const balance of data.leave_balances || []) {
-    insertBalance.run(
-      balance.id,
-      balance.user_id,
-      balance.annual_leave || 30,
-      balance.used_leave || 0,
-      balance.remaining_leave || 30,
-      balance.year || new Date().getFullYear(),
-      balance.days_worked || 0,
-      balance.calculated_leave || 0,
-      balance.manual_adjustment || 0,
-      balance.adjustment_reason || null
+    db.run(
+      `INSERT INTO leave_balances (id, user_id, annual_leave, used_leave, remaining_leave, year, days_worked, calculated_leave, manual_adjustment, adjustment_reason, updated_at, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+      [
+        balance.id,
+        balance.user_id,
+        balance.annual_leave || 30,
+        balance.used_leave || 0,
+        balance.remaining_leave || 30,
+        balance.year || new Date().getFullYear(),
+        balance.days_worked || 0,
+        balance.calculated_leave || 0,
+        balance.manual_adjustment || 0,
+        balance.adjustment_reason || null
+      ]
     );
   }
   console.log(`[Migration] Seeded ${data.leave_balances?.length || 0} leave balances`);
   
   // Seed activity logs
-  const insertLog = db.prepare(`
-    INSERT INTO activity_logs (id, user_id, action, resource_type, resource_id, details, ip_address, user_agent, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-  `);
-  
   for (const log of data.activity_logs || []) {
-    insertLog.run(
-      log.id,
-      log.user_id,
-      log.action,
-      log.resource_type || null,
-      log.resource_id || null,
-      log.details || null,
-      log.ip_address || null,
-      log.user_agent || null
+    db.run(
+      `INSERT INTO activity_logs (id, user_id, action, resource_type, resource_id, details, ip_address, user_agent, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+      [
+        log.id,
+        log.user_id,
+        log.action,
+        log.resource_type || null,
+        log.resource_id || null,
+        log.details || null,
+        log.ip_address || null,
+        log.user_agent || null
+      ]
     );
   }
   console.log(`[Migration] Seeded ${data.activity_logs?.length || 0} activity logs`);
   
   // Seed system settings
-  const insertSetting = db.prepare(`
-    INSERT INTO system_settings (id, key, value, description, updated_at, updated_by, created_at)
-    VALUES (?, ?, ?, ?, datetime('now'), ?, datetime('now'))
-  `);
-  
   for (const setting of data.system_settings || []) {
-    insertSetting.run(
-      setting.id,
-      setting.key,
-      setting.value,
-      setting.description || null,
-      setting.updated_by || null
+    db.run(
+      `INSERT INTO system_settings (id, key, value, description, updated_at, updated_by, created_at)
+       VALUES (?, ?, ?, ?, datetime('now'), ?, datetime('now'))`,
+      [
+        setting.id,
+        setting.key,
+        setting.value,
+        setting.description || null,
+        setting.updated_by || null
+      ]
     );
   }
   console.log(`[Migration] Seeded ${data.system_settings?.length || 0} system settings`);
   
+  await saveDatabase();
   console.log('[Migration] Database seeded successfully');
 }
 
 /**
  * Initialize default system settings
  */
-export function initializeDefaultSettings(): void {
-  const db = getDbConnection();
+export async function initializeDefaultSettings(): Promise<void> {
+  const db = await getDbConnection();
   
   console.log('[Migration] Initializing default system settings...');
   
@@ -354,33 +352,28 @@ export function initializeDefaultSettings(): void {
     { key: 'log_retention_days', value: '90', description: 'Activity log retention period in days' },
   ];
   
-  const insertSetting = db.prepare(`
-    INSERT OR IGNORE INTO system_settings (key, value, description, created_at, updated_at)
-    VALUES (?, ?, ?, datetime('now'), datetime('now'))
-  `);
-  
   for (const setting of defaults) {
-    insertSetting.run(setting.key, setting.value, setting.description);
+    db.run(
+      `INSERT OR IGNORE INTO system_settings (key, value, description, created_at, updated_at)
+       VALUES (?, ?, ?, datetime('now'), datetime('now'))`,
+      [setting.key, setting.value, setting.description]
+    );
   }
   
+  await saveDatabase();
   console.log('[Migration] Default system settings initialized');
 }
 
 /**
  * Run full migration
  */
-export function runMigration(): void {
+export async function runMigration(): Promise<void> {
   console.log('[Migration] Starting database migration...');
   
-  createTables();
-  createIndexes();
-  seedFromJson();
-  initializeDefaultSettings();
+  await createTables();
+  await createIndexes();
+  await seedFromJson();
+  await initializeDefaultSettings();
   
   console.log('[Migration] Migration completed successfully');
-}
-
-// Run if called directly
-if (require.main === module) {
-  runMigration();
 }

@@ -11,7 +11,7 @@ export class SettingsRepository {
    * Find setting by ID
    */
   async findById(id: number): Promise<SystemSetting | undefined> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db.select().from(systemSettings).where(eq(systemSettings.id, id)).limit(1);
     return result[0];
   }
@@ -20,7 +20,7 @@ export class SettingsRepository {
    * Find setting by key
    */
   async findByKey(key: string): Promise<SystemSetting | undefined> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db.select().from(systemSettings).where(eq(systemSettings.key, key)).limit(1);
     return result[0];
   }
@@ -37,7 +37,7 @@ export class SettingsRepository {
    * Get all settings
    */
   async findAll(): Promise<SystemSetting[]> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     return db.select().from(systemSettings);
   }
 
@@ -45,7 +45,7 @@ export class SettingsRepository {
    * Create a new setting
    */
   async create(data: Omit<NewSystemSetting, 'id' | 'created_at' | 'updated_at'>): Promise<number> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const now = new Date().toISOString();
     const result = await db.insert(systemSettings).values({
       ...data,
@@ -59,7 +59,7 @@ export class SettingsRepository {
    * Update a setting
    */
   async update(key: string, value: string, updatedBy?: number): Promise<boolean> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db
       .update(systemSettings)
       .set({
@@ -92,7 +92,7 @@ export class SettingsRepository {
    * Delete a setting
    */
   async delete(key: string): Promise<boolean> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db.delete(systemSettings).where(eq(systemSettings.key, key));
     return result.changes > 0;
   }
@@ -101,7 +101,7 @@ export class SettingsRepository {
    * Count settings
    */
   async count(): Promise<number> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db.select({ count: sql<number>`count(*)` }).from(systemSettings);
     return result[0].count;
   }

@@ -22,12 +22,12 @@ interface Database {
 // Initialize database
 export async function initializeDatabase(): Promise<void> {
   const { runMigration } = await import('./db/migrate');
-  runMigration();
+  await runMigration();
 }
 
 // Get database for backward compatibility
 export async function getDatabase(): Promise<Database> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   return {
     users: await db.select().from(users) as User[],
     offers: await db.select().from(offers) as Offer[],
@@ -43,7 +43,7 @@ export async function getFreshDatabase(): Promise<Database> {
 }
 
 // No-op saveDatabase for backward compatibility (SQLite auto-saves)
-export function saveDatabase(): void {
+export async function saveDatabase(): Promise<void> {
   // SQLite handles persistence automatically - no action needed
 }
 
@@ -52,41 +52,41 @@ export const updateSystemSetting = setSystemSetting;
 
 // User functions
 export async function findUserByEmail(email: string): Promise<User | undefined> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
   return result[0];
 }
 
 export async function findUserById(id: number): Promise<User | undefined> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
   return result[0];
 }
 
 export async function getAllUsers(): Promise<User[]> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   return await db.select().from(users).orderBy(desc(users.created_at));
 }
 
 // Offer functions
 export async function getAllOffers(): Promise<Offer[]> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   return await db.select().from(offers).orderBy(desc(offers.created_at));
 }
 
 export async function getActiveOffers(): Promise<Offer[]> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   return await db.select().from(offers).where(eq(offers.status, 'Disponible'));
 }
 
 export async function getOfferById(id: number): Promise<Offer | undefined> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const result = await db.select().from(offers).where(eq(offers.id, id)).limit(1);
   return result[0];
 }
 
 export async function autoUpdateOfferStatuses(): Promise<number> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const now = new Date();
   let updatedCount = 0;
 
@@ -131,7 +131,7 @@ export async function autoUpdateOfferStatuses(): Promise<number> {
 }
 
 export async function updateOfferStatusBasedOnParticipants(offerId: number): Promise<boolean> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const offer = await getOfferById(offerId);
   if (!offer) return false;
 
@@ -166,29 +166,29 @@ export async function updateOfferStatusBasedOnParticipants(offerId: number): Pro
 
 // Request functions
 export async function getUserRequests(userId: number): Promise<Request[]> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   return await db.select().from(requests).where(eq(requests.user_id, userId)).orderBy(desc(requests.created_at));
 }
 
 export async function getPendingRequests(): Promise<Request[]> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   return await db.select().from(requests).where(eq(requests.status, 'En cours / En attente RH'));
 }
 
 export async function getRequestById(id: number): Promise<Request | undefined> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const result = await db.select().from(requests).where(eq(requests.id, id)).limit(1);
   return result[0];
 }
 
 export async function getAllRequests(): Promise<Request[]> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   return await db.select().from(requests).orderBy(desc(requests.created_at));
 }
 
 // Leave balance functions
 export async function getLeaveBalance(userId: number): Promise<LeaveBalance | undefined> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const currentYear = new Date().getFullYear();
   const result = await db.select().from(leaveBalances)
     .where(and(eq(leaveBalances.user_id, userId), eq(leaveBalances.year, currentYear)))
@@ -204,7 +204,7 @@ export async function createUser(
   role: 'employee' | 'hr_admin' | 'owner',
   department?: string
 ): Promise<number> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const result = await db.insert(users).values({
     email,
     password_hash: passwordHash,
@@ -234,7 +234,7 @@ export async function createOffer(
   images?: string[],
   duration?: string | null
 ): Promise<number> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const offerStatus = maxParticipants === 0 ? 'Complet' : 'Disponible';
   
   const result = await db.insert(offers).values({
@@ -277,7 +277,7 @@ export async function updateOffer(
     status?: OfferStatus;
   }
 ): Promise<boolean> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const result = await db.update(offers)
     .set({ ...updates, updated_at: new Date().toISOString() })
     .where(eq(offers.id, id));
@@ -291,7 +291,7 @@ export async function adjustLeaveBalance(
   manualAdjustment?: number,
   reason?: string
 ): Promise<boolean> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const currentYear = new Date().getFullYear();
   const balance = await db.select().from(leaveBalances)
     .where(and(eq(leaveBalances.user_id, userId), eq(leaveBalances.year, currentYear)))
@@ -321,7 +321,7 @@ export async function adjustLeaveBalance(
 }
 
 export async function deleteOffer(id: number): Promise<boolean> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const result = await db.delete(offers).where(eq(offers.id, id));
   return result.changes > 0;
 }
@@ -338,7 +338,7 @@ export async function createRequest(
   selectedStartDate?: string,
   selectedEndDate?: string
 ): Promise<number> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const result = await db.insert(requests).values({
     user_id: userId,
     offer_id: offerId || null,
@@ -359,7 +359,7 @@ export async function createRequest(
 }
 
 export async function approveRequest(requestId: number, approvedBy: number): Promise<boolean> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const result = await db.update(requests)
     .set({
       status: 'Acceptée',
@@ -372,7 +372,7 @@ export async function approveRequest(requestId: number, approvedBy: number): Pro
 }
 
 export async function rejectRequest(requestId: number, approvedBy: number): Promise<boolean> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const result = await db.update(requests)
     .set({
       status: 'Refusée',
@@ -385,7 +385,7 @@ export async function rejectRequest(requestId: number, approvedBy: number): Prom
 }
 
 export async function updateLeaveBalance(userId: number, usedLeave: number): Promise<boolean> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const currentYear = new Date().getFullYear();
   const balance = await db.select().from(leaveBalances)
     .where(and(eq(leaveBalances.user_id, userId), eq(leaveBalances.year, currentYear)))
@@ -405,7 +405,7 @@ export async function updateLeaveBalance(userId: number, usedLeave: number): Pro
 }
 
 export async function initializeLeaveBalance(userId: number, annualLeave: number = 30, daysWorked: number = 0): Promise<number> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const currentYear = new Date().getFullYear();
   const calculatedLeave = Math.floor(daysWorked / 22) * 1.5;
   const totalLeave = annualLeave + calculatedLeave;
@@ -434,7 +434,7 @@ export async function logActivity(
   resourceId?: number,
   details?: string
 ): Promise<void> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   await db.insert(activityLogs).values({
     user_id: userId,
     action,
@@ -451,7 +451,7 @@ export async function updateRequest(
   approvedBy: number,
   reason?: string
 ): Promise<boolean> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   
   const updateData: any = {
     status,
@@ -480,7 +480,7 @@ export async function updateRequestDetails(
   requestId: number,
   details: { start_date?: string; end_date?: string; reason?: string }
 ): Promise<boolean> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const updateData: any = { updated_at: new Date().toISOString() };
   
   if (details.start_date !== undefined) updateData.start_date = details.start_date;
@@ -494,7 +494,7 @@ export async function updateRequestDetails(
 }
 
 export async function updateOfferParticipants(offerId: number): Promise<boolean> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const offer = await getOfferById(offerId);
   if (!offer) return false;
   
@@ -509,13 +509,13 @@ export async function updateOfferParticipants(offerId: number): Promise<boolean>
 }
 
 export async function deleteRequest(requestId: number): Promise<boolean> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const result = await db.delete(requests).where(eq(requests.id, requestId));
   return result.changes > 0;
 }
 
 export async function updateLeaveBalanceUsage(userId: number, days: number): Promise<boolean> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const currentYear = new Date().getFullYear();
   const balance = await db.select().from(leaveBalances)
     .where(and(eq(leaveBalances.user_id, userId), eq(leaveBalances.year, currentYear)))
@@ -540,7 +540,7 @@ export function calculateLeaveFromWorkDays(daysWorked: number): number {
 
 // Update leave balance with worked days
 export async function updateLeaveBalanceFromWorkDays(userId: number, daysWorked: number): Promise<boolean> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const currentYear = new Date().getFullYear();
   const balance = await db.select().from(leaveBalances)
     .where(and(eq(leaveBalances.user_id, userId), eq(leaveBalances.year, currentYear)))
@@ -565,7 +565,7 @@ export async function updateLeaveBalanceFromWorkDays(userId: number, daysWorked:
 
 // Update offer status
 export async function updateOfferStatus(offerId: number): Promise<boolean> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const offer = await getOfferById(offerId);
   
   if (!offer) return false;
@@ -591,7 +591,7 @@ export async function updateOfferStatus(offerId: number): Promise<boolean> {
 
 // Update all offers status
 export async function updateAllOffersStatus(): Promise<void> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const allOffers = await db.select().from(offers);
   const now = new Date();
   
@@ -617,12 +617,12 @@ export async function updateAllOffersStatus(): Promise<void> {
 
 // Admin functions
 export async function getHrAdmins(): Promise<User[]> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   return await db.select().from(users).where(eq(users.role, 'hr_admin'));
 }
 
 export async function checkEmailExists(email: string): Promise<boolean> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
   return result.length > 0;
 }
@@ -642,7 +642,7 @@ export async function updateHrAdmin(id: number, updates: {
   department?: string;
   password?: string;
 }): Promise<boolean> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const user = await db.select().from(users).where(and(eq(users.id, id), eq(users.role, 'hr_admin'))).limit(1);
   
   if (!user[0]) return false;
@@ -673,13 +673,13 @@ export async function updateHrAdmin(id: number, updates: {
 }
 
 export async function deleteHrAdmin(id: number): Promise<boolean> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const result = await db.delete(users).where(and(eq(users.id, id), eq(users.role, 'hr_admin')));
   return result.changes > 0;
 }
 
 export async function deactivateHrAdmin(id: number, deactivatedBy: number): Promise<boolean> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const result = await db.update(users)
     .set({
       status: 'inactive',
@@ -691,7 +691,7 @@ export async function deactivateHrAdmin(id: number, deactivatedBy: number): Prom
 }
 
 export async function reactivateHrAdmin(id: number, reactivatedBy: number): Promise<boolean> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const result = await db.update(users)
     .set({
       status: 'active',
@@ -708,7 +708,7 @@ export async function reactivateHrAdmin(id: number, reactivatedBy: number): Prom
 }
 
 export async function getEmployees(): Promise<User[]> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   return await db.select().from(users).where(eq(users.role, 'employee'));
 }
 
@@ -718,7 +718,7 @@ export async function updateEmployee(id: number, updates: {
   department?: string | null;
   password?: string;
 }): Promise<boolean> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const user = await db.select().from(users).where(and(eq(users.id, id), eq(users.role, 'employee'))).limit(1);
   
   if (!user[0]) return false;
@@ -750,7 +750,7 @@ export async function updateEmployee(id: number, updates: {
 
 // Delete employee function
 export async function deleteEmployee(id: number): Promise<boolean> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const result = await db.delete(users).where(and(eq(users.id, id), eq(users.role, 'employee')));
   return result.changes > 0;
 }
@@ -761,7 +761,7 @@ export async function updateUserProfile(id: number, updates: {
   department?: string | null;
   password?: string;
 }): Promise<boolean> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const user = await db.select().from(users).where(eq(users.id, id)).limit(1);
   
   if (!user[0]) return false;
@@ -792,7 +792,7 @@ export async function updateUserProfile(id: number, updates: {
 }
 
 export async function setEmployeeStatus(id: number, status: UserStatus, changedBy?: number): Promise<boolean> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const user = await db.select().from(users).where(and(eq(users.id, id), eq(users.role, 'employee'))).limit(1);
   
   if (!user[0]) return false;
@@ -821,13 +821,13 @@ export async function setEmployeeStatus(id: number, status: UserStatus, changedB
 
 // System Settings functions
 export async function getSystemSetting(key: string): Promise<string | null> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const result = await db.select().from(systemSettings).where(eq(systemSettings.key, key)).limit(1);
   return result[0]?.value || null;
 }
 
 export async function setSystemSetting(key: string, value: string, updatedBy: number = 0, description?: string): Promise<boolean> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const existing = await db.select().from(systemSettings).where(eq(systemSettings.key, key)).limit(1);
   
   if (existing[0]) {
@@ -848,18 +848,18 @@ export async function setSystemSetting(key: string, value: string, updatedBy: nu
 }
 
 export async function getAllSystemSettings(): Promise<SystemSetting[]> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   return await db.select().from(systemSettings);
 }
 
 // Activity Log functions
 export async function getActivityLogs(limit: number = 100): Promise<ActivityLog[]> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   return await db.select().from(activityLogs).orderBy(desc(activityLogs.created_at)).limit(limit);
 }
 
 export async function getUserActivityLogs(userId: number, limit: number = 50): Promise<ActivityLog[]> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   return await db.select().from(activityLogs)
     .where(eq(activityLogs.user_id, userId))
     .orderBy(desc(activityLogs.created_at))
@@ -868,7 +868,7 @@ export async function getUserActivityLogs(userId: number, limit: number = 50): P
 
 // Request with details
 export async function getRequestWithDetails(requestId: number): Promise<any> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const request = await db.select().from(requests).where(eq(requests.id, requestId)).limit(1);
   
   if (!request[0]) return null;
@@ -958,7 +958,7 @@ const calculateInclusiveDays = (range: DateRange): number => {
 
 // Approve request with business logic
 export async function approveRequestAndApply(requestId: number, approvedBy: number): Promise<{ success: boolean; error?: string }> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const request = await db.select().from(requests).where(eq(requests.id, requestId)).limit(1);
 
   if (!request[0]) {
@@ -1037,7 +1037,7 @@ export async function approveRequestAndApply(requestId: number, approvedBy: numb
 
 // Reverse approval changes
 export async function reverseApprovalChanges(requestId: number, reversedBy: number): Promise<boolean> {
-  const db = getDrizzleDb();
+  const db = await getDrizzleDb();
   const request = await db.select().from(requests).where(eq(requests.id, requestId)).limit(1);
 
   if (!request[0] || request[0].status !== 'Acceptée') {

@@ -11,7 +11,7 @@ export class OfferRepository {
    * Find offer by ID
    */
   async findById(id: number): Promise<Offer | undefined> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db.select().from(offers).where(eq(offers.id, id)).limit(1);
     return result[0];
   }
@@ -20,7 +20,7 @@ export class OfferRepository {
    * Get all offers
    */
   async findAll(): Promise<Offer[]> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     return db.select().from(offers).orderBy(desc(offers.created_at));
   }
 
@@ -28,7 +28,7 @@ export class OfferRepository {
    * Get offers by status
    */
   async findByStatus(status: OfferStatus): Promise<Offer[]> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     return db.select().from(offers).where(eq(offers.status, status));
   }
 
@@ -36,7 +36,7 @@ export class OfferRepository {
    * Get active offers (Disponible status)
    */
   async findActive(): Promise<Offer[]> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     return db
       .select()
       .from(offers)
@@ -48,7 +48,7 @@ export class OfferRepository {
    * Get available offers (not full and not expired)
    */
   async findAvailable(): Promise<Offer[]> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const now = new Date().toISOString();
     
     return db
@@ -67,7 +67,7 @@ export class OfferRepository {
    * Get offers within date range
    */
   async findByDateRange(startDate: string, endDate: string): Promise<Offer[]> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     return db
       .select()
       .from(offers)
@@ -83,7 +83,7 @@ export class OfferRepository {
    * Get offers by creator
    */
   async findByCreator(createdBy: number): Promise<Offer[]> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     return db
       .select()
       .from(offers)
@@ -95,7 +95,7 @@ export class OfferRepository {
    * Create a new offer
    */
   async create(data: Omit<NewOffer, 'id' | 'created_at' | 'current_participants'>): Promise<number> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db.insert(offers).values({
       ...data,
       current_participants: 0,
@@ -108,7 +108,7 @@ export class OfferRepository {
    * Update an offer
    */
   async update(id: number, data: Partial<Omit<NewOffer, 'id' | 'created_at'>>): Promise<boolean> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db
       .update(offers)
       .set({
@@ -123,7 +123,7 @@ export class OfferRepository {
    * Update offer participants count
    */
   async incrementParticipants(id: number): Promise<boolean> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db
       .update(offers)
       .set({
@@ -147,7 +147,7 @@ export class OfferRepository {
    * Decrement offer participants count
    */
   async decrementParticipants(id: number): Promise<boolean> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db
       .update(offers)
       .set({
@@ -171,7 +171,7 @@ export class OfferRepository {
    * Update offer status
    */
   async updateStatus(id: number, status: OfferStatus): Promise<boolean> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db
       .update(offers)
       .set({
@@ -186,7 +186,7 @@ export class OfferRepository {
    * Auto-update offer statuses based on deadline and participants
    */
   async autoUpdateStatuses(): Promise<number> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const now = new Date();
     let updatedCount = 0;
 
@@ -235,7 +235,7 @@ export class OfferRepository {
    * Delete an offer
    */
   async delete(id: number): Promise<boolean> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db.delete(offers).where(eq(offers.id, id));
     return result.changes > 0;
   }
@@ -244,7 +244,7 @@ export class OfferRepository {
    * Count offers
    */
   async count(): Promise<number> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db.select({ count: sql<number>`count(*)` }).from(offers);
     return result[0].count;
   }
@@ -253,7 +253,7 @@ export class OfferRepository {
    * Count offers by status
    */
   async countByStatus(status: OfferStatus): Promise<number> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db
       .select({ count: sql<number>`count(*)` })
       .from(offers)

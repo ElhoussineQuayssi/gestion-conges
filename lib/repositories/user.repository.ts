@@ -11,7 +11,7 @@ export class UserRepository {
    * Find user by email
    */
   async findByEmail(email: string): Promise<User | undefined> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
     return result[0];
   }
@@ -20,7 +20,7 @@ export class UserRepository {
    * Find user by ID
    */
   async findById(id: number): Promise<User | undefined> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
     return result[0];
   }
@@ -29,7 +29,7 @@ export class UserRepository {
    * Get all users
    */
   async findAll(): Promise<User[]> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     return db.select().from(users).orderBy(desc(users.created_at));
   }
 
@@ -37,7 +37,7 @@ export class UserRepository {
    * Get users by role
    */
   async findByRole(role: UserRole): Promise<User[]> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     return db.select().from(users).where(eq(users.role, role));
   }
 
@@ -45,7 +45,7 @@ export class UserRepository {
    * Get users by status
    */
   async findByStatus(status: UserStatus): Promise<User[]> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     return db.select().from(users).where(eq(users.status, status));
   }
 
@@ -53,7 +53,7 @@ export class UserRepository {
    * Search users by name or email
    */
   async search(query: string): Promise<User[]> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const searchPattern = `%${query}%`;
     return db.select().from(users).where(
       sql`(${users.full_name} LIKE ${searchPattern} OR ${users.email} LIKE ${searchPattern})`
@@ -64,7 +64,7 @@ export class UserRepository {
    * Create a new user
    */
   async create(data: Omit<NewUser, 'id' | 'created_at'>): Promise<number> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db.insert(users).values({
       ...data,
       created_at: new Date().toISOString(),
@@ -76,7 +76,7 @@ export class UserRepository {
    * Update a user
    */
   async update(id: number, data: Partial<Omit<NewUser, 'id' | 'created_at'>>): Promise<boolean> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db.update(users)
       .set({
         ...data,
@@ -90,7 +90,7 @@ export class UserRepository {
    * Deactivate a user
    */
   async deactivate(id: number, deactivatedBy: number): Promise<boolean> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db.update(users)
       .set({
         status: 'inactive',
@@ -106,7 +106,7 @@ export class UserRepository {
    * Reactivate a user
    */
   async reactivate(id: number): Promise<boolean> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db.update(users)
       .set({
         status: 'active',
@@ -122,7 +122,7 @@ export class UserRepository {
    * Delete a user
    */
   async delete(id: number): Promise<boolean> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db.delete(users).where(eq(users.id, id));
     return result.changes > 0;
   }
@@ -131,7 +131,7 @@ export class UserRepository {
    * Count users
    */
   async count(): Promise<number> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db.select({ count: sql<number>`count(*)` }).from(users);
     return result[0].count;
   }
@@ -140,7 +140,7 @@ export class UserRepository {
    * Count users by role
    */
   async countByRole(role: UserRole): Promise<number> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db
       .select({ count: sql<number>`count(*)` })
       .from(users)

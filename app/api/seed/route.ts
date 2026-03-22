@@ -7,7 +7,7 @@ export async function POST() {
   try {
     console.log('[Seed] Adding more data to database...');
     
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const currentYear = new Date().getFullYear();
     const passwordEmployee = bcrypt.hashSync('Employee123!', 10);
     

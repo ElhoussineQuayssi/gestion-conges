@@ -11,7 +11,7 @@ export class RequestRepository {
    * Find request by ID
    */
   async findById(id: number): Promise<Request | undefined> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db.select().from(requests).where(eq(requests.id, id)).limit(1);
     return result[0];
   }
@@ -20,7 +20,7 @@ export class RequestRepository {
    * Get all requests
    */
   async findAll(): Promise<Request[]> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     return db.select().from(requests).orderBy(desc(requests.created_at));
   }
 
@@ -28,7 +28,7 @@ export class RequestRepository {
    * Get requests by user
    */
   async findByUserId(userId: number): Promise<Request[]> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     return db
       .select()
       .from(requests)
@@ -40,7 +40,7 @@ export class RequestRepository {
    * Get requests by status
    */
   async findByStatus(status: RequestStatus): Promise<Request[]> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     return db
       .select()
       .from(requests)
@@ -52,7 +52,7 @@ export class RequestRepository {
    * Get pending requests (En cours / En attente RH)
    */
   async findPending(): Promise<Request[]> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     return db
       .select()
       .from(requests)
@@ -64,7 +64,7 @@ export class RequestRepository {
    * Get requests by type
    */
   async findByType(type: RequestType): Promise<Request[]> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     return db
       .select()
       .from(requests)
@@ -76,7 +76,7 @@ export class RequestRepository {
    * Get requests by offer
    */
   async findByOfferId(offerId: number): Promise<Request[]> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     return db
       .select()
       .from(requests)
@@ -88,7 +88,7 @@ export class RequestRepository {
    * Get approved requests for an offer
    */
   async findApprovedByOfferId(offerId: number): Promise<Request[]> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     return db
       .select()
       .from(requests)
@@ -104,7 +104,7 @@ export class RequestRepository {
    * Get requests within date range
    */
   async findByDateRange(startDate: string, endDate: string): Promise<Request[]> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     return db
       .select()
       .from(requests)
@@ -120,7 +120,7 @@ export class RequestRepository {
    * Get requests by reviewer
    */
   async findByReviewer(reviewerId: number): Promise<Request[]> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     return db
       .select()
       .from(requests)
@@ -132,7 +132,7 @@ export class RequestRepository {
    * Create a new request
    */
   async create(data: Omit<NewRequest, 'id' | 'created_at'>): Promise<number> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db.insert(requests).values({
       ...data,
       created_at: new Date().toISOString(),
@@ -144,7 +144,7 @@ export class RequestRepository {
    * Update a request
    */
   async update(id: number, data: Partial<Omit<NewRequest, 'id' | 'created_at'>>): Promise<boolean> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db
       .update(requests)
       .set({
@@ -164,7 +164,7 @@ export class RequestRepository {
     approvedBy?: number,
     reason?: string
   ): Promise<boolean> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const updateData: Partial<Request> = {
       status,
       updated_at: new Date().toISOString(),
@@ -205,7 +205,7 @@ export class RequestRepository {
    * Auto-reject a request
    */
   async autoReject(id: number, autoRejectionReason: string): Promise<boolean> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db
       .update(requests)
       .set({
@@ -224,7 +224,7 @@ export class RequestRepository {
     id: number,
     details: { start_date?: string; end_date?: string; reason?: string }
   ): Promise<boolean> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const updateData: Partial<Request> = {
       updated_at: new Date().toISOString(),
     };
@@ -247,7 +247,7 @@ export class RequestRepository {
    * Delete a request
    */
   async delete(id: number): Promise<boolean> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db.delete(requests).where(eq(requests.id, id));
     return result.changes > 0;
   }
@@ -256,7 +256,7 @@ export class RequestRepository {
    * Count requests
    */
   async count(): Promise<number> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db.select({ count: sql<number>`count(*)` }).from(requests);
     return result[0].count;
   }
@@ -265,7 +265,7 @@ export class RequestRepository {
    * Count requests by status
    */
   async countByStatus(status: RequestStatus): Promise<number> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db
       .select({ count: sql<number>`count(*)` })
       .from(requests)
@@ -277,7 +277,7 @@ export class RequestRepository {
    * Count requests by user
    */
   async countByUserId(userId: number): Promise<number> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db
       .select({ count: sql<number>`count(*)` })
       .from(requests)

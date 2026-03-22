@@ -11,7 +11,7 @@ export class LeaveBalanceRepository {
    * Find leave balance by ID
    */
   async findById(id: number): Promise<LeaveBalance | undefined> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db.select().from(leaveBalances).where(eq(leaveBalances.id, id)).limit(1);
     return result[0];
   }
@@ -20,7 +20,7 @@ export class LeaveBalanceRepository {
    * Find leave balance by user ID
    */
   async findByUserId(userId: number): Promise<LeaveBalance | undefined> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db
       .select()
       .from(leaveBalances)
@@ -33,7 +33,7 @@ export class LeaveBalanceRepository {
    * Find leave balance by user ID and year
    */
   async findByUserIdAndYear(userId: number, year: number): Promise<LeaveBalance | undefined> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db
       .select()
       .from(leaveBalances)
@@ -46,7 +46,7 @@ export class LeaveBalanceRepository {
    * Get all leave balances
    */
   async findAll(): Promise<LeaveBalance[]> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     return db.select().from(leaveBalances).orderBy(desc(leaveBalances.year));
   }
 
@@ -54,7 +54,7 @@ export class LeaveBalanceRepository {
    * Get leave balances by year
    */
   async findByYear(year: number): Promise<LeaveBalance[]> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     return db
       .select()
       .from(leaveBalances)
@@ -66,7 +66,7 @@ export class LeaveBalanceRepository {
    * Get all leave balances for a user
    */
   async findAllByUserId(userId: number): Promise<LeaveBalance[]> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     return db
       .select()
       .from(leaveBalances)
@@ -78,7 +78,7 @@ export class LeaveBalanceRepository {
    * Create a new leave balance
    */
   async create(data: Omit<NewLeaveBalance, 'id' | 'created_at' | 'updated_at'>): Promise<number> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const now = new Date().toISOString();
     const result = await db.insert(leaveBalances).values({
       ...data,
@@ -97,7 +97,7 @@ export class LeaveBalanceRepository {
     daysWorked: number = 0,
     year?: number
   ): Promise<number> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const currentYear = year || new Date().getFullYear();
 
     // Calculate leave from worked days: 22 days = 1.5 days leave
@@ -126,7 +126,7 @@ export class LeaveBalanceRepository {
    * Update a leave balance
    */
   async update(id: number, data: Partial<Omit<NewLeaveBalance, 'id' | 'created_at'>>): Promise<boolean> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db
       .update(leaveBalances)
       .set({
@@ -141,7 +141,7 @@ export class LeaveBalanceRepository {
    * Update used leave
    */
   async updateUsedLeave(userId: number, usedLeave: number, year?: number): Promise<boolean> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const currentYear = year || new Date().getFullYear();
     
     const balance = await this.findByUserIdAndYear(userId, currentYear);
@@ -170,7 +170,7 @@ export class LeaveBalanceRepository {
     reason?: string,
     year?: number
   ): Promise<boolean> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const currentYear = year || new Date().getFullYear();
 
     const balance = await this.findByUserIdAndYear(userId, currentYear);
@@ -210,7 +210,7 @@ export class LeaveBalanceRepository {
    * Delete a leave balance
    */
   async delete(id: number): Promise<boolean> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db.delete(leaveBalances).where(eq(leaveBalances.id, id));
     return result.changes > 0;
   }
@@ -219,7 +219,7 @@ export class LeaveBalanceRepository {
    * Delete leave balance by user ID
    */
   async deleteByUserId(userId: number): Promise<boolean> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db.delete(leaveBalances).where(eq(leaveBalances.user_id, userId));
     return result.changes > 0;
   }
@@ -228,7 +228,7 @@ export class LeaveBalanceRepository {
    * Count leave balances
    */
   async count(): Promise<number> {
-    const db = getDrizzleDb();
+    const db = await getDrizzleDb();
     const result = await db.select({ count: sql<number>`count(*)` }).from(leaveBalances);
     return result[0].count;
   }

@@ -1,3 +1,6 @@
+// Force dynamic rendering - this page uses cookies for authentication
+export const dynamic = 'force-dynamic';
+
 import { getCurrentUser } from '@/lib/auth';
 import { getActiveOffers } from '@/lib/db';
 import { Navigation } from '@/components/navigation';

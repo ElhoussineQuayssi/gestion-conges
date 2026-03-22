@@ -168,7 +168,7 @@ export async function POST() {
       }
     ];
 
-    saveDatabase();
+    await saveDatabase();
 
     return NextResponse.json({
       success: true,

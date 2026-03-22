@@ -162,7 +162,7 @@ export async function GET() {
       }
     ];
 
-    saveDatabase();
+    await saveDatabase();
 
     return NextResponse.json({
       initialized: true,
