@@ -121,7 +121,7 @@ importers:
         version: 0.31.10
       drizzle-orm:
         specifier: ^0.45.1
-        version: 0.45.1(@types/better-sqlite3@7.6.13)(better-sqlite3@12.8.0)(sql.js@1.14.1)
+        version: 0.45.1(@types/better-sqlite3@7.6.13)(@types/sql.js@1.4.10)(better-sqlite3@12.8.0)(sql.js@1.14.1)
       embla-carousel-react:
         specifier: 8.6.0
         version: 8.6.0(react@19.2.4)
@@ -192,6 +192,9 @@ importers:
       '@types/react-dom':
         specifier: 19.2.3
         version: 19.2.3(@types/react@19.2.14)
+      '@types/sql.js':
+        specifier: ^1.4.10
+        version: 1.4.10
       '@types/uuid':
         specifier: ^10.0.0
         version: 10.0.0
@@ -1707,6 +1710,9 @@ packages:
   '@types/d3-timer@3.0.2':
     resolution: {integrity: sha512-Ps3T8E8dZDam6fUyNiMkekK3XUsaUEik+idO9/YjPtfj2qruF8tFBXS7XhtE4iIXBLxhmLjP3SXpLhVf21I9Lw==}
 
+  '@types/emscripten@1.41.5':
+    resolution: {integrity: sha512-cMQm7pxu6BxtHyqJ7mQZ2kXWV5SLmugybFdHCBbJ5eHzOo6VhBckEgAT3//rP5FwPHNPeEiq4SmQ5ucBwsOo4Q==}
+
   '@types/node@22.19.15':
     resolution: {integrity: sha512-F0R/h2+dsy5wJAUe3tAU6oqa2qbWY5TpNfL/RGmo1y38hiyO1w3x2jPtt76wmuaJI4DQnOBu21cNXQ2STIUUWg==}
 
@@ -1717,6 +1723,9 @@ packages:
 
   '@types/react@19.2.14':
     resolution: {integrity: sha512-ilcTH/UniCkMdtexkoCN0bI7pMcJDvmQFPvuPvmEaYA/NSfFTAgdUSLAoVjaRJm7+6PvcM+q1zYOwS4wTYMF9w==}
+
+  '@types/sql.js@1.4.10':
+    resolution: {integrity: sha512-E7XnsrWm01Uvp0/0+iRI9ZwO/BvKyiiHUpcVKJenVVH2pUdZndsgQ5BWXNxKaEO+bkKbvU29Ky9o21juMip1ww==}
 
   '@types/uuid@10.0.0':
     resolution: {integrity: sha512-7gqG38EyHgyP1S+7+xomFtL+ZNHcKv6DwNaCZmJmo1vgMugyF3TCnXVg4t1uk89mLNwnLtnY3TpOpCOyp1/xHQ==}
@@ -3722,6 +3731,8 @@ snapshots:
 
   '@types/d3-timer@3.0.2': {}
 
+  '@types/emscripten@1.41.5': {}
+
   '@types/node@22.19.15':
     dependencies:
       undici-types: 6.21.0
@@ -3733,6 +3744,11 @@ snapshots:
   '@types/react@19.2.14':
     dependencies:
       csstype: 3.2.3
+
+  '@types/sql.js@1.4.10':
+    dependencies:
+      '@types/emscripten': 1.41.5
+      '@types/node': 22.19.15
 
   '@types/uuid@10.0.0': {}
 
@@ -3882,9 +3898,10 @@ snapshots:
       esbuild: 0.25.12
       tsx: 4.21.0
 
-  drizzle-orm@0.45.1(@types/better-sqlite3@7.6.13)(better-sqlite3@12.8.0)(sql.js@1.14.1):
+  drizzle-orm@0.45.1(@types/better-sqlite3@7.6.13)(@types/sql.js@1.4.10)(better-sqlite3@12.8.0)(sql.js@1.14.1):
     optionalDependencies:
       '@types/better-sqlite3': 7.6.13
+      '@types/sql.js': 1.4.10
       better-sqlite3: 12.8.0
       sql.js: 1.14.1
 
