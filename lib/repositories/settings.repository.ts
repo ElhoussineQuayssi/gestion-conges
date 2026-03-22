@@ -51,8 +51,8 @@ export class SettingsRepository {
       ...data,
       created_at: now,
       updated_at: now,
-    });
-    return Number(result.lastInsertRowid);
+    }).returning({ id: systemSettings.id });
+    return result[0]?.id ?? 0;
   }
 
   /**
@@ -60,7 +60,13 @@ export class SettingsRepository {
    */
   async update(key: string, value: string, updatedBy?: number): Promise<boolean> {
     const db = await getDrizzleDb();
-    const result = await db
+    const existing = await this.findByKey(key);
+
+    if (!existing) {
+      return false;
+    }
+
+    await db
       .update(systemSettings)
       .set({
         value,
@@ -68,7 +74,7 @@ export class SettingsRepository {
         updated_at: new Date().toISOString(),
       })
       .where(eq(systemSettings.key, key));
-    return result.changes > 0;
+    return true;
   }
 
   /**
@@ -93,8 +99,14 @@ export class SettingsRepository {
    */
   async delete(key: string): Promise<boolean> {
     const db = await getDrizzleDb();
-    const result = await db.delete(systemSettings).where(eq(systemSettings.key, key));
-    return result.changes > 0;
+    const existing = await this.findByKey(key);
+
+    if (!existing) {
+      return false;
+    }
+
+    await db.delete(systemSettings).where(eq(systemSettings.key, key));
+    return true;
   }
 
   /**

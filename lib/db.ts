@@ -2,7 +2,7 @@
 // This file provides backward compatibility by wrapping the SQLite implementation
 // All functions use the SQLite database instead of JSON file storage
 
-import { getDrizzleDb } from './db/index';
+import { getDrizzleDb, saveDatabase as persistDatabase } from './db/index';
 import { users, offers, requests, leaveBalances, activityLogs, systemSettings, type User, type Offer, type Request, type LeaveBalance, type ActivityLog, type SystemSetting, type UserStatus, type OfferStatus, type RequestStatus, type RequestType } from './db/schema';
 import { eq, desc, and, sql } from 'drizzle-orm';
 import { hashPassword } from './auth';
@@ -44,7 +44,7 @@ export async function getFreshDatabase(): Promise<Database> {
 
 // No-op saveDatabase for backward compatibility (SQLite auto-saves)
 export async function saveDatabase(): Promise<void> {
-  // SQLite handles persistence automatically - no action needed
+  await persistDatabase();
 }
 
 // Alias for backward compatibility

@@ -1,5 +1,6 @@
 // Build timestamp: 2026-03-20T00:00:00Z - Forces rebuild
 import { getCurrentUser } from '@/lib/auth';
+import { ensureDatabaseSeeded } from '@/lib/db/bootstrap';
 import { Navigation } from '@/components/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,12 +23,9 @@ import {
 
 async function initializeDatabase() {
   try {
-    await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/check-init`, {
-      method: 'GET',
-      cache: 'no-store'
-    });
+    await ensureDatabaseSeeded();
   } catch (error) {
-    console.log('[v0] Auto-init check failed (expected if DB already initialized)');
+    console.log('[v0] Auto-init check failed (expected if DB already initialized)', error);
   }
 }
 
@@ -57,17 +55,17 @@ export default async function Home() {
           <Navigation user={user} />
           
           <main>
-        {/* Internal Use Badge - Local Network Only */}
+        {/* Access badge */}
         <div className="bg-primary/10 border-b">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5">
             <div className="flex items-center justify-center gap-2">
               <Badge variant="secondary" className="border-primary/30 bg-primary/20 px-2.5 py-0.5 text-xs text-primary">
                 <Building2 className="w-3 h-3 mr-1" />
-                Accès Réservé - Réseau Interne Fenie Brossette Maroc
+                Plateforme securisee Fenie Brossette Maroc
               </Badge>
             </div>
             <div className="flex items-center justify-center mt-1">
-              <span className="text-xs text-muted-foreground">Cette plateforme est accessible uniquement depuis le réseau local de l'entreprise</span>
+              <span className="text-xs text-muted-foreground">Accessible via le web pour les collaborateurs autorises, en local comme en production.</span>
             </div>
           </div>
         </div>

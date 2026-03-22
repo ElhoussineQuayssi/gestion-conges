@@ -17,6 +17,29 @@ pnpm init-db
 pnpm dev
 ```
 
+## Déploiement Vercel
+
+### 1. Importer le projet
+- Importez ce dépôt dans Vercel
+- Framework Preset: `Next.js`
+
+### 2. Variables d'environnement
+- `SESSION_SECRET` : clé secrète longue et unique pour signer les sessions
+
+### 3. Commandes Vercel
+- Install Command: `pnpm install --no-frozen-lockfile`
+- Build Command: `pnpm build`
+
+### 4. Initialisation
+- Le projet initialise automatiquement les données de démo au premier lancement
+- Vous pouvez aussi appeler `POST /api/init` si vous voulez forcer l'initialisation
+
+### 5. Limitation importante
+- Le projet utilise actuellement SQLite via `sql.js`
+- En local, les données sont écrites dans `data/database.sqlite`
+- Sur Vercel, le fichier est écrit dans `/tmp`, donc les données ne sont pas garanties entre exécutions serverless
+- Pour une vraie production persistante sur Vercel, il faudra migrer vers une base distante comme Vercel Postgres, Neon, Supabase ou Turso
+
 ## Identifiants de test
 
 - **Employé:** employee@example.com / Employee123!
