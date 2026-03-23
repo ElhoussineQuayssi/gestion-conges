@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { ensureDatabaseSeeded } from '@/lib/db/bootstrap';
 import { Navigation } from '@/components/navigation';
 import { Button } from '@/components/ui/button';
+import { HomeSeedButton } from '@/components/home-seed-button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getDashboardRoute } from '@/lib/utils';
@@ -89,9 +90,9 @@ export default async function Home() {
                     <Link href="/login">
                       <Button size="lg">Se Connecter</Button>
                     </Link>
-                    <Link href="/setup">
-                      <Button size="lg" variant="outline">Configuration initiale</Button>
-                    </Link>
+                  </div>
+                  <div className="max-w-xl">
+                    <HomeSeedButton />
                   </div>
                   <p className="text-sm text-muted-foreground">
                     <Clock className="w-4 h-4 inline mr-1" />

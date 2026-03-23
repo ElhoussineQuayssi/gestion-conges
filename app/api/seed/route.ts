@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { getDrizzleDb } from '@/lib/db/index';
+import { saveDatabase as persistDatabase } from '@/lib/db/index';
+import { ensureDatabaseSeeded } from '@/lib/db/bootstrap';
 import { users, offers, requests, leaveBalances, activityLogs, systemSettings, type User } from '@/lib/db/schema';
 
 export async function POST() {
   try {
     console.log('[Seed] Adding more data to database...');
-    
+
+    const initResult = await ensureDatabaseSeeded();
     const db = await getDrizzleDb();
     const currentYear = new Date().getFullYear();
     const passwordEmployee = bcrypt.hashSync('Employee123!', 10);
@@ -24,6 +27,7 @@ export async function POST() {
       { email: 'hr.specialist@example.com', full_name: 'Samuel Specialist', department: 'RH' },
     ];
     
+    let hrAdminsAdded = 0;
     for (const admin of hrAdmins) {
       const existing = existingUsers.find((u: User) => u.email === admin.email);
       if (!existing) {
@@ -38,6 +42,7 @@ export async function POST() {
           deactivated_by: null,
           created_at: new Date().toISOString(),
         });
+        hrAdminsAdded++;
       }
     }
     
@@ -67,7 +72,8 @@ export async function POST() {
     ];
 
     const employeeIds: number[] = [];
-    
+    let employeesAdded = 0;
+
     for (const emp of newEmployees) {
       const existing = existingUsers.find((u: User) => u.email === emp.email);
       if (existing) {
@@ -87,6 +93,7 @@ export async function POST() {
       });
       const newId = Number(result.lastInsertRowid);
       employeeIds.push(newId);
+      employeesAdded++;
       
       // Create leave balance for each new employee
       await db.insert(leaveBalances).values({
@@ -193,6 +200,7 @@ export async function POST() {
     ];
 
     const offerIds: number[] = [];
+    let offersAdded = 0;
     for (const offer of newOffers) {
       if (existingOfferTitles.has(offer.title)) {
         const existingOffer = existingOffers.find((o: any) => o.title === offer.title);
@@ -205,6 +213,7 @@ export async function POST() {
         created_at: new Date().toISOString(),
       });
       offerIds.push(Number(result.lastInsertRowid));
+      offersAdded++;
     }
 
     // Create requests (mix of offer and leave requests)
@@ -224,6 +233,7 @@ export async function POST() {
     ];
 
     // Create requests for employees
+    let requestsAdded = 0;
     for (let i = 0; i < employeeIds.length; i++) {
       const empId = employeeIds[i];
       
@@ -246,6 +256,7 @@ export async function POST() {
           auto_rejection_reason: null,
           created_at: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
         });
+        requestsAdded++;
       }
       
       // Leave request
@@ -266,6 +277,7 @@ export async function POST() {
           auto_rejection_reason: null,
           created_at: new Date(Date.now() - Math.random() * 60 * 24 * 60 * 60 * 1000).toISOString(),
         });
+        requestsAdded++;
       }
     }
 
@@ -281,6 +293,7 @@ export async function POST() {
 
     const allUserIds = [...employeeIds, hrAdmin.id, owner.id];
     
+    let activityLogsAdded = 0;
     for (let i = 0; i < 50; i++) {
       const randomUserId = allUserIds[Math.floor(Math.random() * allUserIds.length)];
       const randomAction = actions[Math.floor(Math.random() * actions.length)];
@@ -295,6 +308,7 @@ export async function POST() {
         user_agent: 'Mozilla/5.0',
         created_at: new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000).toISOString(),
       });
+      activityLogsAdded++;
     }
 
     // Get existing settings to avoid duplicates
@@ -325,15 +339,25 @@ export async function POST() {
       }
     }
 
+    await persistDatabase();
+
     return NextResponse.json({
       success: true,
-      message: 'Database seeded successfully',
+      message: initResult.seededNow
+        ? 'Base de donnees initialisee et enrichie avec des donnees de demo'
+        : 'Donnees de demo ajoutees a la base',
+      users: [
+        { email: 'employee@example.com', password: 'Employee123!' },
+        { email: 'admin@example.com', password: 'Admin123!' },
+        { email: 'owner@example.com', password: 'Owner123!' }
+      ],
       added: {
-        employees: newEmployees.length,
-        offers: newOffers.length,
-        requests: employeeIds.length * 2,
-        activity_logs: 50,
-        system_settings: settings.length,
+        hr_admins: hrAdminsAdded,
+        employees: employeesAdded,
+        offers: offersAdded,
+        requests: requestsAdded,
+        activity_logs: activityLogsAdded,
+        system_settings: settingsAdded,
       }
     });
   } catch (error) {
