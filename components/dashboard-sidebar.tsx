@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Sheet,
   SheetContent,
+  SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
 import {
@@ -471,6 +472,7 @@ export function DashboardSidebar({ user, children }: DashboardSidebarProps) {
             side="left"
             className="w-72 p-0 bg-slate-900 border-slate-700"
           >
+            <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
             <SidebarContent isMobile />
           </SheetContent>
         </Sheet>

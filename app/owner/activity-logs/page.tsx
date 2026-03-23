@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/use-auth';
+import { Download } from 'lucide-react';
 
 interface ActivityLog {
   id: number;
@@ -84,8 +85,114 @@ export default function ActivityLogsPage() {
     setOffset(0);
   };
 
+  const exportToCSV = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (userId) params.set('userId', userId);
+      if (action) params.set('action', action);
+      if (startDate) params.set('startDate', startDate);
+      if (endDate) params.set('endDate', endDate);
+      params.set('limit', '10000'); // Fetch all matching records
+      params.set('offset', '0');
+
+      const response = await fetch(`/api/activity-logs?${params}`);
+      if (response.ok) {
+        const data = await response.json();
+        const logsToExport = data.logs || [];
+        
+        if (logsToExport.length === 0) {
+          alert('Aucune donnée à exporter');
+          return;
+        }
+
+        // Create CSV content
+        const headers = ['Date', 'Utilisateur', 'Email', 'Action', 'Ressource', 'ID Ressource', 'Détails'];
+        const csvRows = [headers.join(',')];
+
+        logsToExport.forEach((log: ActivityLog) => {
+          const row = [
+            new Date(log.created_at).toLocaleString('fr-FR'),
+            `"${log.full_name}"`,
+            `"${log.user_email}"`,
+            `"${log.action}"`,
+            `"${log.resource_type || ''}"`,
+            log.resource_id || '',
+            `"${(log.details || '').replace(/"/g, '""')}"`
+          ];
+          csvRows.push(row.join(','));
+        });
+
+        const csvContent = csvRows.join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `activity-logs-${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'exportation CSV:', error);
+      alert('Erreur lors de l\'exportation');
+    }
+  };
+
   const formatAction = (action: string) => {
+    // Map action types to French
+    const actionTranslations: Record<string, string> = {
+      'login': 'Connexion',
+      'logout': 'Déconnexion',
+      'leave_request_create': 'Demande de congé créée',
+      'leave_request_update': 'Demande de congé mise à jour',
+      'leave_request_approve': 'Demande de congés approuvée',
+      'leave_request_reject': 'Demande de congés refusée',
+      'leave_request_cancel': 'Demande de congés annulée',
+      'leave_request_delete': 'Demande de congés supprimée',
+      'offer_create': 'Offre créée',
+      'offer_update': 'Offre mise à jour',
+      'offer_delete': 'Offre supprimée',
+      'offer_view': 'Offre consultée',
+      'employee_create': 'Employé créé',
+      'employee_update': 'Employé mis à jour',
+      'employee_delete': 'Employé supprimé',
+      'admin_create': 'Administrateur créé',
+      'admin_update': 'Administrateur mis à jour',
+      'admin_delete': 'Administrateur supprimé',
+      'balance_update': 'Solde mis à jour',
+      'settings_update': 'Paramètres mis à jour',
+      'password_change': 'Mot de passe modifié',
+      'profile_update': 'Profil mis à jour',
+      'bulk_approve': 'Approbation en masse',
+      'bulk_reject': 'Rejet en masse',
+      'database_reset': 'Base de données réinitialisée',
+    };
+
+    // Return French translation if available, otherwise capitalize
+    if (actionTranslations[action]) {
+      return actionTranslations[action];
+    }
     return action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  const formatResourceType = (resourceType: string | null) => {
+    if (!resourceType) return '';
+    
+    const resourceTranslations: Record<string, string> = {
+      'leave_request': 'Demande de congé',
+      'offer': 'Offre',
+      'employee': 'Employé',
+      'admin': 'Administrateur',
+      'balance': 'Solde',
+      'settings': 'Paramètres',
+      'user': 'Utilisateur',
+    };
+
+    if (resourceTranslations[resourceType]) {
+      return resourceTranslations[resourceType];
+    }
+    return resourceType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   const getActionBadgeVariant = (action: string): "default" | "secondary" | "destructive" | "outline" => {
@@ -105,11 +212,18 @@ export default function ActivityLogsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Journal d'activité</h1>
-        <p className="text-muted-foreground">
-          Historique complet des actions des utilisateurs
-        </p>
+      {/* Header with Export Button */}
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Journal d'activité</h1>
+          <p className="text-muted-foreground">
+            Historique complet des actions des utilisateurs
+          </p>
+        </div>
+        <Button onClick={exportToCSV} variant="outline" className="shrink-0">
+          <Download className="mr-2 h-4 w-4" />
+          Exporter CSV
+        </Button>
       </div>
 
       {/* Filters */}
@@ -215,7 +329,7 @@ export default function ActivityLogsPage() {
                         </td>
                         <td className="p-3 text-sm">
                           {log.resource_type ? (
-                            <span className="capitalize">{log.resource_type}</span>
+                            <span className="capitalize">{formatResourceType(log.resource_type)}</span>
                           ) : (
                             <span className="text-muted-foreground">-</span>
                           )}

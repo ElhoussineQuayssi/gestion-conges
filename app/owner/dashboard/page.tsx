@@ -5,31 +5,44 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import Link from 'next/link';
 
 export default function OwnerDashboard() {
   const router = useRouter();
-  const [users, setUsers] = useState<any[]>([]);
-  const [offers, setOffers] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>(null);
+  const [admins, setAdmins] = useState<any[]>([]);
   const [requests, setRequests] = useState<any[]>([]);
   const [activityLogs, setActivityLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [usersRes, offersRes, requestsRes] = await Promise.all([
+        // Use the dedicated stats API which provides all owner stats
+        const [statsRes, adminsRes, requestsRes] = await Promise.all([
+          fetch('/api/dashboard/stats'),
           fetch('/api/admin-users'),
-          fetch('/api/offers'),
           fetch('/api/requests')
         ]);
 
-        const usersData = await usersRes.json();
-        const offersData = await offersRes.json();
+        const statsData = await statsRes.json();
+        const adminsData = await adminsRes.json();
         const requestsData = await requestsRes.json();
 
-        setUsers(usersData.users || []);
-        setOffers(offersData.offers || []);
+        setStats(statsData);
+        setAdmins(adminsData.admins || []);
         setRequests(requestsData.requests || []);
         
         // Fetch activity logs
@@ -50,6 +63,26 @@ export default function OwnerDashboard() {
     fetchData();
   }, []);
 
+  const handleResetDatabase = async () => {
+    setResetting(true);
+    try {
+      const response = await fetch('/api/owner/reset-db', {
+        method: 'POST',
+      });
+      const data = await response.json();
+      if (data.success) {
+        alert('Base de données réinitialisée avec succès!\nComptes conservés: ' + data.remaining_users.map((u: any) => u.email).join(', '));
+        window.location.reload();
+      } else {
+        alert('Erreur: ' + data.error);
+      }
+    } catch (error) {
+      alert('Erreur lors de la réinitialisation');
+    } finally {
+      setResetting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -58,21 +91,18 @@ export default function OwnerDashboard() {
     );
   }
 
-  // Statistiques globales
-  const totalEmployees = users.filter((u: any) => u.role === 'employee').length;
-  const totalAdmins = users.filter((u: any) => u.role === 'hr_admin').length;
-  const totalActiveAdmins = users.filter((u: any) => u.role === 'hr_admin' && u.status === 'active').length;
-  const totalOffersCount = offers.length;
-  const pendingRequestsCount = requests.filter((r: any) => r.status === 'En cours / En attente RH').length;
+  // Statistiques globales - use stats API which returns computed values
+  const totalEmployees = stats?.totalEmployees || 0;
+  const totalAdmins = stats?.totalAdmins || 0;
+  const totalActiveAdmins = admins.filter((a: any) => a.status === 'active').length;
+  const totalOffersCount = stats?.totalOffers || 0;
+  const pendingRequestsCount = stats?.pendingRequests || 0;
 
   // Statistiques par type de demande
   const approvedOffers = requests.filter((r: any) => r.type === 'offer' && r.status === 'Acceptée').length;
   const approvedLeaves = requests.filter((r: any) => r.type === 'leave' && r.status === 'Acceptée').length;
   const rejectedRequestsCount = requests.filter((r: any) => r.status === 'Refusée').length;
 
-  // Admins RH avec statistiques
-  const admins = users.filter((u: any) => u.role === 'hr_admin');
-  
   // Statistiques par admin RH (demandes traitées)
   const adminStats = admins.map((admin: any) => {
     const approved = requests.filter((r: any) => r.approved_by === admin.id && r.status === 'Acceptée').length;
@@ -90,14 +120,15 @@ export default function OwnerDashboard() {
   }).sort((a: any, b: any) => b.total - a.total);
 
   // System stats
-  const inactiveAdmins = users.filter((u: any) => u.role === 'hr_admin' && u.status !== 'active').length;
+  const inactiveAdmins = admins.filter((a: any) => a.status !== 'active').length;
   const totalRequestsCount = requests.length;
 
-  // Activité récente
+  // Activité récente - use activity logs with fallback for unknown users
   const recentActivity = activityLogs
     .map((log: any) => ({
       ...log,
-      full_name: users.find((u: any) => u.id === log.user_id)?.full_name || 'Utilisateur inconnu'
+      // activity logs have user info embedded or use default
+      full_name: log.user_name || log.full_name || 'Utilisateur inconnu'
     }))
     .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 10);
@@ -214,6 +245,38 @@ export default function OwnerDashboard() {
                   Paramètres système
                 </Button>
               </Link>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" className="w-full justify-start mt-4">
+                    Réinitialiser la base de données
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Êtes-vous sûr?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Cette action supprimera définitivement toutes les données de la base de données
+                      (demandes, offres, congés, journaux d'activité) et tous les comptes sauf:
+                      <ul className="mt-2 list-disc list-inside text-sm">
+                        <li>owner@example.com (propriétaire)</li>
+                        <li>admin@example.com (admin RH)</li>
+                        <li>employee@example.com (employé)</li>
+                      </ul>
+                      Cette action est irréversible.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleResetDatabase}
+                      disabled={resetting}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      {resetting ? 'Réinitialisation...' : 'Confirmer la réinitialisation'}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </CardContent>
         </Card>

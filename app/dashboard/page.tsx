@@ -377,21 +377,6 @@ export default function DashboardPage() {
               </Link>
             </CardContent>
           </Card>
-
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-blue-500" />
-                Suivi
-              </CardTitle>
-              <CardDescription>Vue d'ensemble</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button variant="outline" className="w-full">
-                Voir les stats
-              </Button>
-            </CardContent>
-          </Card>
         </div>
 
         {hasRecentRequests && (
